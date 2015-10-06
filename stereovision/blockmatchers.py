@@ -109,12 +109,10 @@ class BlockMatcher(object):
 
 
 class StereoBM(BlockMatcher):
-
     """A stereo block matching ``BlockMatcher``."""
 
     parameter_maxima = {"search_range": None,
-                       "window_size": 255,
-                       "stereo_bm_preset": cv2.STEREO_BM_NARROW_PRESET}
+                        "window_size": 255}
 
     @property
     def search_range(self):
@@ -140,47 +138,25 @@ class StereoBM(BlockMatcher):
     def window_size(self, value):
         """Set private ``_window_size`` and reset ``_block_matcher``."""
         if (value > 4 and
-            value < self.parameter_maxima["window_size"] and
-            value % 2):
+                    value < self.parameter_maxima["window_size"] and
+                    value % 2):
             self._window_size = value
         else:
             raise InvalidWindowSizeError("Window size must be an odd number "
-                                      "between 0 and {}.".format(
-                                      self.parameter_maxima["window_size"] + 1))
-        self._replace_bm()
-
-    @property
-    def stereo_bm_preset(self):
-        """Return private ``_bm_preset`` value."""
-        return self._bm_preset
-
-    @stereo_bm_preset.setter
-    def stereo_bm_preset(self, value):
-        """Set private ``_stereo_bm_preset`` and reset ``_block_matcher``."""
-        if value in (cv2.STEREO_BM_BASIC_PRESET,
-                     cv2.STEREO_BM_FISH_EYE_PRESET,
-                     cv2.STEREO_BM_NARROW_PRESET):
-            self._bm_preset = value
-        else:
-            raise InvalidBMPresetError("Stereo BM preset must be defined as "
-                                       "cv2.STEREO_BM_*_PRESET.")
+                                         "between 0 and {}.".format(
+                self.parameter_maxima["window_size"] + 1))
         self._replace_bm()
 
     def _replace_bm(self):
         """Replace ``_block_matcher`` with current values."""
-        self._block_matcher = cv2.StereoBM(preset=self._bm_preset,
-                                          ndisparities=self._search_range,
-                                          SADWindowSize=self._window_size)
+        self._block_matcher = cv2.StereoBM_create(self._search_range,
+                                                  self._window_size)
 
-    def __init__(self, stereo_bm_preset=cv2.STEREO_BM_BASIC_PRESET,
-                 search_range=80,
+    def __init__(self, search_range=80,
                  window_size=21,
                  settings=None):
-        self._bm_preset = cv2.STEREO_BM_BASIC_PRESET
         self._search_range = 0
         self._window_size = 5
-        #: OpenCV camera type for ``_block_matcher``
-        self.stereo_bm_preset = stereo_bm_preset
         #: Number of disparities for ``_block_matcher``
         self.search_range = search_range
         #: Search window size for ``_block_matcher``
@@ -201,23 +177,22 @@ class StereoBM(BlockMatcher):
         else:
             gray = pair
         return self._block_matcher.compute(gray[0], gray[1],
-                                          disptype=cv2.CV_32F)
+                                           disptype=cv2.CV_32F)
 
 
 class StereoSGBM(BlockMatcher):
-
     """A semi-global block matcher."""
 
     parameter_maxima = {"minDisparity": None,
-                       "numDisparities": None,
-                       "SADWindowSize": 11,
-                       "P1": None,
-                       "P2": None,
-                       "disp12MaxDiff": None,
-                       "uniquenessRatio": 15,
-                       "speckleWindowSize": 200,
-                       "speckleRange": 2,
-                       "fullDP": 1}
+                        "numDisparities": None,
+                        "SADWindowSize": 11,
+                        "P1": None,
+                        "P2": None,
+                        "disp12MaxDiff": None,
+                        "uniquenessRatio": 15,
+                        "speckleWindowSize": 200,
+                        "speckleRange": 2,
+                        "fullDP": 1}
 
     @property
     def minDisparity(self):
@@ -344,7 +319,7 @@ class StereoSGBM(BlockMatcher):
             self._P2 = value
         else:
             raise InvalidSecondDisparityChangePenaltyError("P2 must be greater "
-                                                          "than P1.")
+                                                           "than P1.")
         self._replace_bm()
 
     @property
@@ -360,16 +335,17 @@ class StereoSGBM(BlockMatcher):
 
     def _replace_bm(self):
         """Replace ``_block_matcher`` with current values."""
-        self._block_matcher = cv2.StereoSGBM(minDisparity=self._min_disparity,
-                        numDisparities=self._num_disp,
-                        SADWindowSize=self._sad_window_size,
-                        uniquenessRatio=self._uniqueness,
-                        speckleWindowSize=self._speckle_window_size,
-                        speckleRange=self._speckle_range,
-                        disp12MaxDiff=self._max_disparity,
-                        P1=self._P1,
-                        P2=self._P2,
-                        fullDP=self._full_dp)
+        # TODO Parametersmismatch
+        self._block_matcher = cv2.StereoSGBM_create(minDisparity=self._min_disparity,
+                                             numDisparities=self._num_disp,
+                                             SADWindowSize=self._sad_window_size,
+                                             uniquenessRatio=self._uniqueness,
+                                             speckleWindowSize=self._speckle_window_size,
+                                             speckleRange=self._speckle_range,
+                                             disp12MaxDiff=self._max_disparity,
+                                             P1=self._P1,
+                                             P2=self._P2,
+                                             fullDP=self._full_dp)
 
     def __init__(self, min_disparity=16, num_disp=96, sad_window_size=3,
                  uniqueness=10, speckle_window_size=100, speckle_range=32,
@@ -398,10 +374,10 @@ class StereoSGBM(BlockMatcher):
         #: Boolean to use full-scale two-pass dynamic algorithm
         self._full_dp = full_dp
         #: StereoSGBM whose state is controlled
-        self._block_matcher = cv2.StereoSGBM()
+        self._block_matcher = cv2.StereoSGBM_create()
         super(StereoSGBM, self).__init__(settings)
 
     def get_disparity(self, pair):
         """Compute disparity from image pair (left, right)."""
         return self._block_matcher.compute(pair[0],
-                                          pair[1]).astype(np.float32) / 16.0
+                                           pair[1]).astype(np.float32) / 16.0
